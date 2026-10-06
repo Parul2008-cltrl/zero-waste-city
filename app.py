@@ -1,27 +1,24 @@
-from flask import Flask, request
+from flask import Flask, request, Response
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route("/submit", methods=["POST"])
 def submit():
 
-    # Get information from the survey
     name = request.form.get("name")
     email = request.form.get("email")
     segregation = request.form.get("segregation")
     waste = request.form.get("waste")
     suggestion = request.form.get("suggestion")
 
-    # Get checkbox information
     reuse = "Yes" if request.form.get("reuse") else "No"
     recycle = "Yes" if request.form.get("recycle") else "No"
     segregate = "Yes" if request.form.get("segregate") else "No"
     compost = "Yes" if request.form.get("compost") else "No"
 
-
-    # Save the survey response
     with open("survey_responses.txt", "a") as file:
 
         file.write("Name: " + str(name) + "\n")
@@ -38,8 +35,25 @@ def submit():
 
         file.write("----------------------------------\n")
 
-
     return "Survey submitted successfully!"
+
+
+@app.route("/responses")
+def responses():
+
+    password = request.args.get("password")
+
+    if password != "zero123":
+        return "Access denied"
+
+    try:
+        with open("survey_responses.txt", "r") as file:
+            data = file.read()
+
+        return "<pre>" + data + "</pre>"
+
+    except FileNotFoundError:
+        return "No survey responses yet."
 
 
 if __name__ == "__main__":
