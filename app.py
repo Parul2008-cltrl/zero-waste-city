@@ -1,8 +1,15 @@
-from flask import Flask, request, Response
+import os
+from flask import Flask, request
 from flask_cors import CORS
+from supabase import create_client
 
 app = Flask(__name__)
 CORS(app)
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 @app.route("/submit", methods=["POST"])
@@ -19,21 +26,17 @@ def submit():
     segregate = "Yes" if request.form.get("segregate") else "No"
     compost = "Yes" if request.form.get("compost") else "No"
 
-    with open("survey_responses.txt", "a") as file:
-
-        file.write("Name: " + str(name) + "\n")
-        file.write("Email: " + str(email) + "\n")
-        file.write("Segregates Waste: " + str(segregation) + "\n")
-        file.write("Most Produced Waste: " + str(waste) + "\n")
-
-        file.write("Reuse Materials: " + reuse + "\n")
-        file.write("Recycle: " + recycle + "\n")
-        file.write("Segregate Waste: " + segregate + "\n")
-        file.write("Compost Organic Waste: " + compost + "\n")
-
-        file.write("Suggestion: " + str(suggestion) + "\n")
-
-        file.write("----------------------------------\n")
+    supabase.table("survey_responses").insert({
+        "name": name,
+        "email": email,
+        "segregation": segregation,
+        "waste": waste,
+        "reuse": reuse,
+        "recycle": recycle,
+        "segregate": segregate,
+        "compost": compost,
+        "suggestion": suggestion
+    }).execute()
 
     return "Survey submitted successfully!"
 
@@ -46,14 +49,32 @@ def responses():
     if password != "zero123":
         return "Access denied"
 
-    try:
-        with open("survey_responses.txt", "r") as file:
-            data = file.read()
+    result = (
+        supabase
+        .table("survey_responses")
+        .select("*")
+        .order("created_at")
+        .execute()
+    )
 
-        return "<pre>" + data + "</pre>"
-
-    except FileNotFoundError:
+    if not result.data:
         return "No survey responses yet."
+
+    data = ""
+
+    for row in result.data:
+        data += "Name: " + str(row.get("name")) + "\n"
+        data += "Email: " + str(row.get("email")) + "\n"
+        data += "Segregates Waste: " + str(row.get("segregation")) + "\n"
+        data += "Most Produced Waste: " + str(row.get("waste")) + "\n"
+        data += "Reuse Materials: " + str(row.get("reuse")) + "\n"
+        data += "Recycle: " + str(row.get("recycle")) + "\n"
+        data += "Segregate Waste: " + str(row.get("segregate")) + "\n"
+        data += "Compost Organic Waste: " + str(row.get("compost")) + "\n"
+        data += "Suggestion: " + str(row.get("suggestion")) + "\n"
+        data += "----------------------------------\n"
+
+    return "<pre>" + data + "</pre>"
 
 
 if __name__ == "__main__":
